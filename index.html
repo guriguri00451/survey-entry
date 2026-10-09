@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>アンケートへ移動中</title>
+</head>
+<body>
+<p>アンケートページへ移動しています…</p>
+<script>
+// 6条件のGoogleフォームURL。フォーム作成後に差し替える。
+// 番号は記事バリアント.mdの負荷軽い順（1=短×高構造 … 6=長×低構造）。
+var urls = [
+  "https://forms.gle/REPLACE_1_short_high",
+  "https://forms.gle/REPLACE_2_short_low",
+  "https://forms.gle/REPLACE_3_mid_high",
+  "https://forms.gle/REPLACE_4_mid_low",
+  "https://forms.gle/REPLACE_5_long_high",
+  "https://forms.gle/REPLACE_6_long_low"
+];
+// 単純一様ランダム割付。リダイレクト履歴を残さないため replace を使う。
+location.replace(urls[Math.floor(Math.random() * urls.length)]);
+</script>
+</body>
+</html>
