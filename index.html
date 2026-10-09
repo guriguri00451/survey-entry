@@ -11,7 +11,7 @@
     /* 読みやすさ重視: 大きめフォント＋ゆとりある行間 */
     font-size: 19px; line-height: 2.0;
   }
-  .wrap { max-width: 680px; margin: 0 auto; padding: 24px 20px 110px; }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 24px 44px 110px 20px; position: relative; }
   h1 { font-size: 23px; line-height: 1.5; margin: 8px 0 32px; }
   h2 { font-size: 20px; margin: 48px 0 16px; }
   p { margin: 0 0 32px; }
@@ -19,11 +19,14 @@
     background: #f6f6f6; border-left: 4px solid #bbb;
     padding: 16px 18px; margin-bottom: 36px; font-size: 17px;
   }
-  /* 帯境界: 点線＋右端の薄いアルファベット（A〜F）。ページ番号程度の存在感に抑える */
-  .bandline { position: relative; border-top: 1px dashed #ccc; margin: 28px 0; }
-  .bandline span {
-    position: absolute; right: 0; top: -13px; background: #fff;
-    padding: 0 4px; color: #999; font-size: 14px; font-weight: bold;
+  /* 帯マーカー: 右マージンにA〜Fを等間隔で配置。ページ番号程度の存在感に抑える */
+  .bandmark {
+    position: absolute; right: 4px; width: 20px; text-align: center;
+    color: #bbb; font-size: 13px; font-weight: bold; line-height: 1;
+  }
+  .bandmark::before {
+    content: ""; display: block; width: 14px; margin: 0 auto 2px;
+    border-top: 1px solid #ccc;
   }
   #footer {
     position: fixed; left: 0; right: 0; bottom: 0;
@@ -75,32 +78,22 @@ art.blocks.forEach(function (b) {
   bodyEl.appendChild(el);
 });
 
-// ===== 帯マーカー（A〜F）を本文の実測高さで6等分して挿入 =====
+// ===== 帯マーカー（A〜F）を本文の実測高さで6等分して右マージンに配置 =====
 var N_BANDS = 6;
-var bandTop = [];   // 各帯の開始Y座標（点線挿入後のレイアウトで確定する）
+var bandTop = [];   // 各帯の開始Y座標
 var bandAt = [];    // 各帯への初到達時刻（ms）
 (function placeMarkers() {
   var top0 = bodyEl.offsetTop, h = bodyEl.offsetHeight;
-  var lines = [];
-  for (var i = 1; i < N_BANDS; i++) {
+  var wrap = document.querySelector(".wrap");
+  for (var i = 0; i < N_BANDS; i++) {
     var y = top0 + h * i / N_BANDS;
-    var line = document.createElement("div");
-    line.className = "bandline";
-    var m = document.createElement("span");
-    m.textContent = String.fromCharCode(65 + i);
-    line.appendChild(m);
-    // 境界yに最も近いブロックの直前に点線を挿入
-    var kids = bodyEl.children, best = kids[0], bd = Infinity;
-    for (var k = 0; k < kids.length; k++) {
-      var d = Math.abs(kids[k].offsetTop - y);
-      if (d < bd) { bd = d; best = kids[k]; }
-    }
-    bodyEl.insertBefore(line, best);
-    lines.push(line);
+    bandTop.push(y); bandAt.push(null);
+    var m = document.createElement("div");
+    m.className = "bandmark";
+    m.textContent = String.fromCharCode(65 + i); // A〜F
+    m.style.top = y + "px";
+    wrap.appendChild(m);
   }
-  // 挿入した点線で高さが変わるため、確定レイアウトのoffsetTopで帯境界を取り直す
-  bandTop = [top0].concat(lines.map(function (l) { return l.offsetTop; }));
-  bandAt = bandTop.map(function () { return null; });
 })();
 
 // ===== 計測 =====
