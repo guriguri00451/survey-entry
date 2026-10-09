@@ -3,23 +3,96 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>アンケートへ移動中</title>
+<title>ニュース記事</title>
+<style>
+  body { margin: 0; background: #fff; font-family: -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 12px 12px 90px; }
+  img.article { width: 100%; height: auto; display: block; }
+  #footer {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: #f8f8f8; border-top: 1px solid #ddd;
+    padding: 10px 16px; display: flex; justify-content: center;
+  }
+  #finishBtn {
+    font-size: 16px; padding: 10px 36px; border: none; border-radius: 6px;
+    background: #1a73e8; color: #fff; cursor: pointer;
+  }
+  #overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  #overlay.show { display: flex; }
+  .card { background: #fff; border-radius: 8px; padding: 28px 24px; max-width: 420px; text-align: center; }
+  .card p { margin: 0 0 12px; line-height: 1.6; }
+  #code { font-size: 34px; font-weight: bold; letter-spacing: 3px; margin: 8px 0 16px; }
+</style>
 </head>
 <body>
-<p>アンケートページへ移動しています…</p>
+<div class="wrap"><img id="article" class="article" alt="記事"></div>
+
+<div id="footer"><button id="finishBtn">読み終える</button></div>
+
+<div id="overlay"><div class="card">
+  <p>記事を読み終えました。<br>下の確認コードを、アンケートフォームの該当欄に入力してください。</p>
+  <div id="code"></div>
+  <p style="font-size:13px;color:#666">入力後、フォームの回答を続けてください。<br>このページは閉じて構いません。</p>
+</div></div>
+
 <script>
-// 6条件のGoogleフォームURL。フォーム作成後に差し替える。
-// 番号は記事バリアント.mdの負荷軽い順（1=短×高構造 … 6=長×低構造）。
-var urls = [
-  "https://forms.gle/REPLACE_1_short_high",
-  "https://forms.gle/REPLACE_2_short_low",
-  "https://forms.gle/REPLACE_3_mid_high",
-  "https://forms.gle/REPLACE_4_mid_low",
-  "https://forms.gle/REPLACE_5_long_high",
-  "https://forms.gle/REPLACE_6_long_low"
-];
-// 単純一様ランダム割付。リダイレクト履歴を残さないため replace を使う。
-location.replace(urls[Math.floor(Math.random() * urls.length)]);
+// 条件割付: 1=短×高構造 2=短×低構造 3=中×高構造 4=中×低構造 5=長×高構造 6=長×低構造
+var cond = 1 + Math.floor(Math.random() * 6);
+document.getElementById("article").src = "articles/" + cond + ".png";
+
+// 確認コード: ランダム4文字 + "-" + 条件番号。ログと突合するためのセッション識別子を兼ねる。
+var ABC = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // 紛らわしい文字を除外
+var tok = "";
+for (var i = 0; i < 4; i++) tok += ABC[Math.floor(Math.random() * ABC.length)];
+var code = tok + "-" + cond;
+
+var t0 = Date.now();
+var maxScroll = 0;
+function updateScroll() {
+  var h = document.documentElement.scrollHeight - window.innerHeight;
+  var r = h > 0 ? window.scrollY / h : 1;
+  if (r > maxScroll) maxScroll = Math.min(r, 1);
+}
+window.addEventListener("scroll", updateScroll);
+
+// --- ログ送信（隠しGoogleフォームへのPOST。未設定なら無効のまま動く） ---
+// 用意するもの: 回答用とは別のGoogleフォームを1つ作り、
+// フィールド（すべて記述式・単数回答でよい）: token / event / cond / scroll / ms
+// 作成後、フォームの「事前入力」URLから entry.* のIDを拾い下記に設定する。
+var LOG = {
+  url: "",            // 例: "https://docs.google.com/forms/d/e/XXXX/formResponse"
+  entry: { token: "", event: "", cond: "", scroll: "", ms: "" }
+};
+function logEvent(ev) {
+  if (!LOG.url) return;
+  var p = new URLSearchParams();
+  p.append(LOG.entry.token, code);
+  p.append(LOG.entry.event, ev);              // open / finish / leave
+  p.append(LOG.entry.cond, String(cond));
+  p.append(LOG.entry.scroll, String(Math.round(maxScroll * 100)));
+  p.append(LOG.entry.ms, String(Date.now() - t0));
+  var body = new Blob([p.toString()], { type: "application/x-www-form-urlencoded" });
+  if (ev === "leave") { navigator.sendBeacon(LOG.url, body); return; }
+  fetch(LOG.url, { method: "POST", mode: "no-cors", body: body });
+}
+logEvent("open");
+// タブを閉じる/戻るでfinishを踏まない人＝送信前離脱。best-effortで記録する。
+var left = false;
+window.addEventListener("pagehide", function () {
+  if (!left) { left = true; logEvent("leave"); }
+});
+
+document.getElementById("finishBtn").addEventListener("click", function () {
+  updateScroll();
+  left = true; // 明示的な読了は leave と二重記録しない
+  logEvent("finish");
+  document.getElementById("code").textContent = code;
+  document.getElementById("overlay").classList.add("show");
+  document.getElementById("footer").style.display = "none";
+});
 </script>
 </body>
 </html>
