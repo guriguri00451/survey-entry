@@ -132,24 +132,18 @@ function logEvent(ev) {
   if (!LOG.url) return;
   var p = new URLSearchParams();
   p.append(LOG.entry.token, code);
-  p.append(LOG.entry.event, ev);              // open / finish / leave
+  p.append(LOG.entry.event, ev);              // open / finish
   p.append(LOG.entry.cond, String(cond));
   p.append(LOG.entry.scroll, String(Math.round(maxScroll * 100)));
   p.append(LOG.entry.ms, String(Date.now() - t0));
   p.append(LOG.entry.detail, detail());
   var body = new Blob([p.toString()], { type: "application/x-www-form-urlencoded" });
-  if (ev === "leave") { navigator.sendBeacon(LOG.url, body); return; }
   fetch(LOG.url, { method: "POST", mode: "no-cors", body: body });
 }
 logEvent("open");
-var left = false;
-window.addEventListener("pagehide", function () {
-  if (!left) { left = true; updateScroll(); logEvent("leave"); }
-});
 
 document.getElementById("finishBtn").addEventListener("click", function () {
   updateScroll();
-  left = true; // 明示的な読了は leave と二重記録しない
   logEvent("finish");
   document.getElementById("code").textContent = code;
   document.getElementById("overlay").classList.add("show");
